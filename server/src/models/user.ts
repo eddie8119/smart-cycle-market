@@ -1,7 +1,17 @@
 import { model, Schema } from 'mongoose';
 import { hash, compare, genSalt } from 'bcrypt';
 
-const userSchema = new Schema(
+interface UserDocument extends Document {
+    name: string;
+    email: string;
+    password: string;
+  }
+  
+  interface Methods {
+    comparePassword(password: string): Promise<boolean>;
+  }
+
+const userSchema = new Schema<UserDocument, {}, Methods>(
   {
     email: {
       type: String,
