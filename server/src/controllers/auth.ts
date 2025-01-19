@@ -1,5 +1,5 @@
 import { RequestHandler } from 'express';
-import crypto from "crypto";
+import crypto from 'crypto';
 import UserModel from 'src/models/user';
 import AuthVerificationTokenModel from 'src/models/authVerificationToken';
 
@@ -20,6 +20,6 @@ export const createNewUser: RequestHandler = async (req, res) => {
 
   const user = await UserModel.create({ name, email, password });
 
-  const token = crypto.randomBytes(36).toString("hex");
+  const token = crypto.randomBytes(36).toString('hex');
   await AuthVerificationTokenModel.create({ owner: user._id, token });
 };
