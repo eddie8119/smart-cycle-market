@@ -8,9 +8,9 @@ import { sendErrorRes } from 'src/utils/helper';
 export const createNewUser: RequestHandler = async (req, res) => {
   const { email, password, name } = req.body;
 
-  if (!name) return sendErrorRes(res, 'Name is missing!', 422);
-  if (!email) return sendErrorRes(res, 'Email is missing!', 422);
-  if (!password) return sendErrorRes(res, 'Password is missing!', 422);
+  // if (!name) return sendErrorRes(res, 'Name is missing!', 422);
+  // if (!email) return sendErrorRes(res, 'Email is missing!', 422);
+  // if (!password) return sendErrorRes(res, 'Password is missing!', 422);
 
   const existingUser = await UserModel.findOne({ email });
 
