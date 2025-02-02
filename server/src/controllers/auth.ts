@@ -1,9 +1,12 @@
 import { RequestHandler } from 'express';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import UserModel from 'src/models/user';
 import AuthVerificationTokenModel from 'src/models/authVerificationToken';
 import nodemailer from 'nodemailer';
 import { sendErrorRes } from 'src/utils/helper';
+
+const JWT_SECRET = process.env.JWT_SECRET;
 
 export const createNewUser: RequestHandler = async (req, res) => {
   const { email, password, name } = req.body;
@@ -53,4 +56,37 @@ export const verifyEmail: RequestHandler = async (req, res) => {
   await AuthVerificationTokenModel.findByIdAndDelete(authToken._id);
 
   res.json({ message: 'Thanks for joining us, your email is verified.' });
+};
+
+export const signIn: RequestHandler = async (req, res) => {
+  const { email, password } = req.body;
+
+  const user = await UserModel.findOne({ email });
+  if (!user) return sendErrorRes(res, 'Email/Password mismatch!', 403);
+
+  const isMatched = await user.comparePassword(password);
+  if (!isMatched) return sendErrorRes(res, 'Email/Password mismatch!', 403);
+
+  const payload = { id: user._id };
+
+  const accessToken = jwt.sign(payload, JWT_SECRET, {
+    expiresIn: '15m',
+  });
+  const refreshToken = jwt.sign(payload, JWT_SECRET);
+
+  if (!user.tokens) user.tokens = [refreshToken];
+  else user.tokens.push(refreshToken);
+
+  await user.save();
+
+  res.json({
+    profile: {
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      verified: user.verified,
+      // avatar: user.avatar?.url,
+    },
+    tokens: { refresh: refreshToken, access: accessToken },
+  });
 };
