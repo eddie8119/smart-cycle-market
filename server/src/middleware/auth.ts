@@ -5,6 +5,20 @@ import UserModel from 'src/models/user';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+interface UserPayload {
+  id: string;
+  email: string;
+  name: string;
+  verified: boolean;
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: UserPayload;
+    }
+  }
+}
 export const isAuth: RequestHandler = async (req, res, next) => {
   try {
     const authToken = req.headers.authorization;
@@ -35,6 +49,6 @@ export const isAuth: RequestHandler = async (req, res, next) => {
     if (error instanceof JsonWebTokenError) {
       return sendErrorRes(res, 'unauthorized access!', 401);
     }
-    return sendErrorRes(res, 'unauthorized access!', 403);
+    next(error);
   }
 };
