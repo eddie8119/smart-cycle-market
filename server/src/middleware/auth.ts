@@ -15,10 +15,11 @@ interface UserPayload {
 declare global {
   namespace Express {
     interface Request {
-      user?: UserPayload;
+      user: UserPayload;
     }
   }
 }
+
 export const isAuth: RequestHandler = async (req, res, next) => {
   try {
     const authToken = req.headers.authorization;
