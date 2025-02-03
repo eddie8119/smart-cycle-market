@@ -54,6 +54,48 @@ export const generateVerificationLink: RequestHandler = async (req, res) => {
   await AuthVerificationTokenModel.create({ owner: id, token });
 
   await mail.sendVerification(req.user.email, link);
+  res.json({ message: 'please check your email.' });
+};
+
+export const grantAccessToken: RequestHandler = async (req, res) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) return sendErrorRes(res, 'Unauthorized request!', 403);
+
+  const payload = jwt.verify(refreshToken, JWT_SECRET) as { id: string };
+
+  if (!payload.id) return sendErrorRes(res, 'Unauthorized request!', 401);
+
+  const user = await UserModel.findOne({
+    _id: payload.id,
+    tokens: refreshToken,
+  });
+
+  if (!user) {
+    // user is compromised, remove all the previous tokens
+    await UserModel.findByIdAndUpdate(payload.id, { tokens: [] });
+    return sendErrorRes(res, 'Unauthorized request!', 401);
+  }
+
+  const newAccessToken = jwt.sign({ id: user._id }, JWT_SECRET, {
+    expiresIn: '15m',
+  });
+  const newRefreshToken = jwt.sign({ id: user._id }, JWT_SECRET);
+
+  user.tokens = user.tokens.filter((t) => t !== refreshToken);
+  user.tokens.push(newRefreshToken);
+  await user.save();
+
+  res.json({
+    profile: {
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      verified: user.verified,
+      // avatar: user.avatar?.url,
+    },
+    tokens: { refresh: newRefreshToken, access: newAccessToken },
+  });
 };
 
 export const signIn: RequestHandler = async (req, res) => {
