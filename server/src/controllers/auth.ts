@@ -90,3 +90,9 @@ export const signIn: RequestHandler = async (req, res) => {
     tokens: { refresh: refreshToken, access: accessToken },
   });
 };
+
+export const sendProfile: RequestHandler = async (req, res) => {
+  res.json({
+    profile: req.user,
+  });
+};
