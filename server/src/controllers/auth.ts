@@ -3,8 +3,8 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import UserModel from 'src/models/user';
 import AuthVerificationTokenModel from 'src/models/authVerificationToken';
-import nodemailer from 'nodemailer';
 import { sendErrorRes } from 'src/utils/helper';
+import { mail } from 'src/utils/mail';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -25,20 +25,7 @@ export const createNewUser: RequestHandler = async (req, res) => {
 
   const link = `http://localhost:8000/verify?id=${user._id}&token=${token}`;
 
-  const transport = nodemailer.createTransport({
-    host: 'sandbox.smtp.mailtrap.io',
-    port: 2525,
-    auth: {
-      user: 'a47b4a02e523dd',
-      pass: '8919e797c87aaf',
-    },
-  });
-
-  await transport.sendMail({
-    from: 'verification@myapp.com',
-    to: user.email,
-    html: `<h1>Please click on <a href="${link}">this link</a> to verify your account.</h1>`,
-  });
+  await mail.sendVerification(user.email, link);
 };
 
 export const verifyEmail: RequestHandler = async (req, res) => {
@@ -56,6 +43,17 @@ export const verifyEmail: RequestHandler = async (req, res) => {
   await AuthVerificationTokenModel.findByIdAndDelete(authToken._id);
 
   res.json({ message: 'Thanks for joining us, your email is verified.' });
+};
+
+export const generateVerificationLink: RequestHandler = async (req, res) => {
+  const { id } = req.user;
+  const token = crypto.randomBytes(36).toString('hex');
+  const link = `http://localhost:8000/verify?id=${id}&token=${token}`;
+
+  await AuthVerificationTokenModel.findOneAndDelete({ owner: id });
+  await AuthVerificationTokenModel.create({ owner: id, token });
+
+  await mail.sendVerification(req.user.email, link);
 };
 
 export const signIn: RequestHandler = async (req, res) => {
