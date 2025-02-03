@@ -17,6 +17,15 @@ const sendVerification = async (email: string, link: string) => {
   });
 };
 
+const sendPasswordResetLink = async (email: string, link: string) => {
+  await transport.sendMail({
+    from: 'security@myapp.com',
+    to: email,
+    html: `<h1>Please click on <a href="${link}">this link</a> to verify your account.</h1>`,
+  });
+};
+
 export const mail = {
   sendVerification,
+  sendPasswordResetLink,
 };
