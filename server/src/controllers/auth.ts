@@ -131,6 +131,21 @@ export const signIn: RequestHandler = async (req, res) => {
   });
 };
 
+export const signOut: RequestHandler = async (req, res) => {
+  const { refreshToken } = req.body;
+  const user = await UserModel.findOne({
+    _id: req.user.id,
+    tokens: refreshToken,
+  });
+  if (!user) return sendErrorRes(res, 'Unauthorized request!', 403);
+
+  const newTokens = user.tokens.filter((t) => t !== refreshToken);
+  user.tokens = newTokens;
+  await user.save();
+
+  res.send();
+};
+
 export const sendProfile: RequestHandler = async (req, res) => {
   res.json({
     profile: req.user,
