@@ -2,6 +2,7 @@ import { RequestHandler } from 'express';
 import jwt, { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
 import { sendErrorRes } from 'src/utils/helper';
 import UserModel from 'src/models/user';
+import PasswordResetTokenModel from 'src/models/passwordResetToken';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -41,6 +42,28 @@ export const isAuth: RequestHandler = async (req, res, next) => {
       name: user.name,
       verified: user.verified,
     };
+
+    next();
+  } catch (error) {
+    if (error instanceof TokenExpiredError) {
+      return sendErrorRes(res, 'session expired!', 401);
+    }
+    if (error instanceof JsonWebTokenError) {
+      return sendErrorRes(res, 'unauthorized access!', 401);
+    }
+    next(error);
+  }
+};
+
+export const isValidPassResetToken: RequestHandler = async (req, res, next) => {
+  try {
+    const { id, token } = req.body;
+
+    const resetPassToken = await PasswordResetTokenModel.findOne({ owner: id });
+    if (!resetPassToken) return sendErrorRes(res, 'unauthorized request!', 403);
+
+    const isMatched = await resetPassToken.compareToken(token);
+    if (!isMatched) return sendErrorRes(res, 'unauthorized request!', 403);
 
     next();
   } catch (error) {

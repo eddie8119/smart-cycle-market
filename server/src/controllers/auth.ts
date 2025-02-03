@@ -165,6 +165,10 @@ export const generateForgetPassLink: RequestHandler = async (req, res) => {
   res.json({ message: 'Please check your email.' });
 };
 
+export const grantValid: RequestHandler = async (req, res) => {
+  res.json({ valid: true });
+};
+
 export const sendProfile: RequestHandler = async (req, res) => {
   res.json({
     profile: req.user,
