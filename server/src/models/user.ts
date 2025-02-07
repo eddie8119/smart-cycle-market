@@ -2,7 +2,7 @@ import { model, Schema } from 'mongoose';
 import { hash, compare, genSalt } from 'bcrypt';
 
 interface UserDocument extends Document {
-  name: string;
+  // name: string;
   email: string;
   password: string;
   verified: boolean;
