@@ -4,12 +4,15 @@ import {
   generateForgetPassLink,
   generateVerificationLink,
   grantAccessToken,
+  grantValid,
   sendProfile,
   signIn,
   signOut,
+  updateAvatar,
   verifyEmail,
 } from 'src/controllers/auth';
-import { isAuth } from 'src/middleware/auth';
+import { isAuth, isValidPassResetToken } from 'src/middleware/auth';
+import fileParser from 'src/middleware/fileParser';
 import validate from 'src/middleware/validator';
 import { newUserSchema, verifyTokenSchema } from 'src/utils/validationSchema';
 
@@ -30,5 +33,8 @@ authRouter.post(
 authRouter.get('/profile', isAuth, sendProfile);
 authRouter.get('/sign-out', isAuth, signOut);
 authRouter.get('/verify-token', isAuth, generateVerificationLink);
+
+// authRouter.patch("/update-profile", isAuth, updateProfile);
+authRouter.patch('/update-avatar', isAuth, fileParser, updateAvatar);
 
 export default authRouter;

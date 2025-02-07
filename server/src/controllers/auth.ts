@@ -6,6 +6,8 @@ import AuthVerificationTokenModel from 'src/models/authVerificationToken';
 import { sendErrorRes } from 'src/utils/helper';
 import { mail } from 'src/utils/mail';
 import PasswordResetTokenModel from 'src/models/passwordResetToken';
+import cloudUploader from 'src/cloud';
+import { isValidObjectId } from 'mongoose';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const PASSWORD_RESET_LINK = process.env.PASSWORD_RESET_LINK;
@@ -172,5 +174,55 @@ export const grantValid: RequestHandler = async (req, res) => {
 export const sendProfile: RequestHandler = async (req, res) => {
   res.json({
     profile: req.user,
+  });
+};
+
+export const updateAvatar: RequestHandler = async (req, res) => {
+  const { avatar } = req.files;
+  if (Array.isArray(avatar)) {
+    return sendErrorRes(res, 'Multiple files are not allowed!', 422);
+  }
+
+  if (!avatar.mimetype?.startsWith('image')) {
+    return sendErrorRes(res, 'Invalid image file!', 422);
+  }
+
+  const user = await UserModel.findById(req.user.id);
+  if (!user) {
+    return sendErrorRes(res, 'User not found!', 404);
+  }
+
+  if (user.avatar?.id) {
+    await cloudUploader.destroy(user.avatar.id);
+  }
+
+  const { secure_url: url, public_id: id } = await cloudUploader.upload(
+    avatar.filepath,
+    {
+      width: 300,
+      height: 300,
+      crop: 'thumb',
+      gravity: 'face',
+    },
+  );
+  user.avatar = { url, id };
+  await user.save();
+
+  res.json({ profile: { ...req.user, avatar: user.avatar.url } });
+};
+
+export const sendPublicProfile: RequestHandler = async (req, res) => {
+  const profileId = req.params.id;
+  if (!isValidObjectId(profileId)) {
+    return sendErrorRes(res, 'Invalid profile id!', 422);
+  }
+
+  const user = await UserModel.findById(profileId);
+  if (!user) {
+    return sendErrorRes(res, 'Profile not found!', 404);
+  }
+
+  res.json({
+    profile: { id: user._id, name: user.name, avatar: user.avatar?.url },
   });
 };
