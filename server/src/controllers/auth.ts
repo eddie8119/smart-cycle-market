@@ -9,7 +9,7 @@ import PasswordResetTokenModel from 'src/models/passwordResetToken';
 import cloudUploader from 'src/cloud';
 import { isValidObjectId } from 'mongoose';
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET!;
 const PASSWORD_RESET_LINK = process.env.PASSWORD_RESET_LINK;
 
 export const createNewUser: RequestHandler = async (req, res) => {
@@ -30,6 +30,18 @@ export const createNewUser: RequestHandler = async (req, res) => {
   const link = `http://localhost:8000/verify?id=${user._id}&token=${token}`;
 
   await mail.sendVerification(user.email, link);
+
+  res.status(201).json({
+    success: true,
+    message:
+      'Registration successful! Please check your email to verify your account.',
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      verified: user.verified,
+    },
+  });
 };
 
 export const verifyEmail: RequestHandler = async (req, res) => {
@@ -49,6 +61,7 @@ export const verifyEmail: RequestHandler = async (req, res) => {
   res.json({ message: 'Thanks for joining us, your email is verified.' });
 };
 
+// 重新發送驗證郵件
 export const generateVerificationLink: RequestHandler = async (req, res) => {
   const { id } = req.user;
   const token = crypto.randomBytes(36).toString('hex');
@@ -59,47 +72,6 @@ export const generateVerificationLink: RequestHandler = async (req, res) => {
 
   await mail.sendVerification(req.user.email, link);
   res.json({ message: 'please check your email.' });
-};
-
-export const grantAccessToken: RequestHandler = async (req, res) => {
-  const { refreshToken } = req.body;
-
-  if (!refreshToken) return sendErrorRes(res, 'Unauthorized request!', 403);
-
-  const payload = jwt.verify(refreshToken, JWT_SECRET) as { id: string };
-
-  if (!payload.id) return sendErrorRes(res, 'Unauthorized request!', 401);
-
-  const user = await UserModel.findOne({
-    _id: payload.id,
-    tokens: refreshToken,
-  });
-
-  if (!user) {
-    // user is compromised, remove all the previous tokens
-    await UserModel.findByIdAndUpdate(payload.id, { tokens: [] });
-    return sendErrorRes(res, 'Unauthorized request!', 401);
-  }
-
-  const newAccessToken = jwt.sign({ id: user._id }, JWT_SECRET, {
-    expiresIn: '15m',
-  });
-  const newRefreshToken = jwt.sign({ id: user._id }, JWT_SECRET);
-
-  user.tokens = user.tokens.filter((t) => t !== refreshToken);
-  user.tokens.push(newRefreshToken);
-  await user.save();
-
-  res.json({
-    profile: {
-      id: user._id,
-      email: user.email,
-      name: user.name,
-      verified: user.verified,
-      // avatar: user.avatar?.url,
-    },
-    tokens: { refresh: newRefreshToken, access: newAccessToken },
-  });
 };
 
 export const signIn: RequestHandler = async (req, res) => {
@@ -129,9 +101,50 @@ export const signIn: RequestHandler = async (req, res) => {
       email: user.email,
       name: user.name,
       verified: user.verified,
-      // avatar: user.avatar?.url,
+      avatar: user.avatar?.url,
     },
     tokens: { refresh: refreshToken, access: accessToken },
+  });
+};
+
+// 當 Access Token 過期時 處理 token 的更新
+export const grantAccessToken: RequestHandler = async (req, res) => {
+  const { refreshToken } = req.body;
+  if (!refreshToken) return sendErrorRes(res, 'Unauthorized request!', 403);
+
+  // 驗證 refreshToken 是否有效
+  const payload = jwt.verify(refreshToken, JWT_SECRET) as { id: string };
+  if (!payload.id) return sendErrorRes(res, 'Unauthorized request!', 401);
+
+  const user = await UserModel.findOne({
+    _id: payload.id,
+    tokens: refreshToken,
+  });
+
+  if (!user) {
+    // user is compromised, remove all the previous tokens
+    await UserModel.findByIdAndUpdate(payload.id, { tokens: [] });
+    return sendErrorRes(res, 'Unauthorized request!', 401);
+  }
+
+  const newAccessToken = jwt.sign({ id: user._id }, JWT_SECRET, {
+    expiresIn: '15m',
+  });
+  const newRefreshToken = jwt.sign({ id: user._id }, JWT_SECRET);
+
+  user.tokens = user.tokens.filter((t) => t !== refreshToken);
+  user.tokens.push(newRefreshToken);
+  await user.save();
+
+  res.json({
+    profile: {
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      verified: user.verified,
+      avatar: user.avatar?.url,
+    },
+    tokens: { refresh: newRefreshToken, access: newAccessToken },
   });
 };
 

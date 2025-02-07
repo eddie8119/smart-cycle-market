@@ -4,7 +4,7 @@ import { sendErrorRes } from 'src/utils/helper';
 import UserModel from 'src/models/user';
 import PasswordResetTokenModel from 'src/models/passwordResetToken';
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET!;
 
 interface UserPayload {
   id: string;
