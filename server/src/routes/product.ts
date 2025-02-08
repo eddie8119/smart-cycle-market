@@ -1,7 +1,11 @@
 import { Router } from 'express';
-import { listNewProduct } from 'src/controllers/product';
+import {
+  deleteProduct,
+  listNewProduct,
+  updateProduct,
+} from 'src/controllers/product';
 
-import { isAuth, isValidPassResetToken } from 'src/middleware/auth';
+import { isAuth } from 'src/middleware/auth';
 import fileParser from 'src/middleware/fileParser';
 import validate from 'src/middleware/validator';
 import { newProductSchema } from 'src/utils/validationSchema';
@@ -23,5 +27,7 @@ productRouter.patch(
   validate(newProductSchema),
   updateProduct,
 );
+
+productRouter.delete('/:id', isAuth, deleteProduct);
 
 export default productRouter;

@@ -161,3 +161,24 @@ export const updateProduct: RequestHandler = async (req, res) => {
   await product.save();
   res.status(201).json({ message: 'Product updated successfully.' });
 };
+
+export const deleteProduct: RequestHandler = async (req, res) => {
+  const productId = req.params.id;
+
+  if (!isValidObjectId(productId))
+    return sendErrorRes(res, 'Invalid product id!', 422);
+
+  const product = await ProductModel.findOneAndDelete({
+    _id: productId,
+    owner: req.user.id,
+  });
+  if (!product) return sendErrorRes(res, 'Product not found!', 404);
+
+  const images = product.images || [];
+  if (images.length) {
+    const ids = images.map(({ id }) => id);
+    await cloudApi.delete_resources(ids);
+  }
+
+  res.status(200).json({ message: 'Product deleted successfully.' });
+};
