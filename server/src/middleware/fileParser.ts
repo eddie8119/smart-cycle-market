@@ -9,6 +9,7 @@ declare global {
   }
 }
 
+// 這個中間件會解析上傳的檔案，並將它們放在 req.files 中
 const fileParser: RequestHandler = async (req, res, next) => {
   const form = formidable();
 
